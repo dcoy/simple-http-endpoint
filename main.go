@@ -52,8 +52,8 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/post", postHandler)
-	fmt.Println("Server is listening on port 8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	fmt.Println("Server is listening on port 1313...")
+	if err := http.ListenAndServe(":1313", nil); err != nil {
 		log.Fatal(err)
 	}
 }
