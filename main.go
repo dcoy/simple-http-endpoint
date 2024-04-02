@@ -3,14 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"time"
 )
 
-// Define a struct to represent the JSON data
+// https://docs.gitlab.com/ee/administration/audit_event_schema.html#audit-event-json-schema
 type Event struct {
 	ID            string      `json:"id"`
 	AuthorID      int         `json:"author_id"`
@@ -27,42 +27,33 @@ type Event struct {
 }
 
 func main() {
-	// Open a log file in append mode
 	logFile, err := os.OpenFile("server.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal("Failed to open log file:", err)
 	}
 	defer logFile.Close()
 
-	// Set log output to the log file
 	log.SetOutput(logFile)
 
-	// Register handler for "/json" endpoint
-	http.HandleFunc("/json", jsonHandler)
+	http.HandleFunc("/api", apiHandler)
 
-	// Start the server
 	fmt.Println("Server listening on port 8080...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func jsonHandler(w http.ResponseWriter, r *http.Request) {
-	// Check if the request method is POST
+func apiHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Read the request body
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 		return
 	}
-
-	// Close the request body
 	defer r.Body.Close()
 
-	// Write the request body JSON to the log file
 	logData := map[string]interface{}{
 		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
 		"payload":   string(body),
@@ -84,8 +75,6 @@ func jsonHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to write to log file", http.StatusInternalServerError)
 		return
 	}
-
-	// Respond with a success message
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("JSON data received successfully\n"))
 }
