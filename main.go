@@ -3,14 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"time"
 )
 
-// https://docs.gitlab.com/ee/administration/audit_event_schema.html#audit-event-json-schema
+// Define a struct to represent the JSON data
 type Event struct {
 	ID            string      `json:"id"`
 	AuthorID      int         `json:"author_id"`
@@ -27,43 +27,65 @@ type Event struct {
 }
 
 func main() {
-	logFile, err := os.OpenFile("server.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	// Open a log file in append mode
+	logFile, err := os.OpenFile("server.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal("Failed to open log file:", err)
 	}
 	defer logFile.Close()
 
+	// Set log output to the log file
 	log.SetOutput(logFile)
 
-	http.HandleFunc("/api", apiHandler)
+	// Register handler for "/json" endpoint
+	http.HandleFunc("/json", jsonHandler)
 
+	// Start the server
 	fmt.Println("Server listening on port 8080...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func apiHandler(w http.ResponseWriter, r *http.Request) {
+func jsonHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the request method is POST
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	body, err := io.ReadAll(r.Body)
+	// Read the request body
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 		return
 	}
 
+	// Close the request body
 	defer r.Body.Close()
 
-	var event Event
-	err = json.Unmarshal(body, &event)
+	// Write the request body JSON to the log file
+	logData := map[string]interface{}{
+		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
+		"payload":   string(body),
+	}
+	logEntry, err := json.Marshal(logData)
 	if err != nil {
-		http.Error(w, "Failed to parse JSON", http.StatusBadRequest)
+		http.Error(w, "Failed to serialize log data", http.StatusInternalServerError)
+		return
+	}
+	logFile, err := os.OpenFile("server.json", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		http.Error(w, "Failed to open log file", http.StatusInternalServerError)
+		return
+	}
+	defer logFile.Close()
+
+	_, err = logFile.WriteString(string(logEntry) + "\n")
+	if err != nil {
+		http.Error(w, "Failed to write to log file", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("[%s] Received event: %+v\n", time.Now().Format("2006-01-02 15:04:05"), event)
-
+	// Respond with a success message
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("JSON data received successfully\n"))
 }
