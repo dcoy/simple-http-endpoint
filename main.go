@@ -35,10 +35,15 @@ func main() {
 
 	log.SetOutput(logFile)
 
+	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/api", apiHandler)
 
-	fmt.Println("Server listening on port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Println("Server listening on port 80...")
+	log.Fatal(http.ListenAndServe(":80", nil))
+}
+
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Hello! you've requested %s\n", r.URL.Path)
 }
 
 func apiHandler(w http.ResponseWriter, r *http.Request) {
