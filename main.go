@@ -38,8 +38,8 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/api", apiHandler)
 
-	fmt.Println("Server listening on port 80...")
-	log.Fatal(http.ListenAndServe(":80", nil))
+	fmt.Println("Server listening on port 8080...")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
